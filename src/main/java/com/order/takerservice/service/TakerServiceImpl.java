@@ -1,16 +1,15 @@
 package com.order.takerservice.service;
 
 import com.order.takerservice.exception.InsufficientTicketException;
+import com.order.takerservice.exception.InvalidOrderMessage;
 import com.order.takerservice.model.*;
 import com.order.takerservice.service.kafka.KafKaSender;
 import com.order.takerservice.service.interfaces.TakerService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import static com.order.takerservice.constant.UrlConstant.ticketUrl;
 
@@ -34,6 +33,10 @@ public class TakerServiceImpl implements TakerService {
     }
 
     private void validateOrder(OrderMessage orderMessage) {
+        if (isOrderMessage(orderMessage)) {
+            throw new InvalidOrderMessage("Invalid order message");
+        }
+
         List<OrderDetailDto> orderDetailDto = orderMessage.getOrderDetailDtoList();
         List<TicketDto> ticketDtoList = getRemainingTickets();
         Map<Integer, Integer> ticketMap = buildTicketHashMap(ticketDtoList);
@@ -41,6 +44,11 @@ public class TakerServiceImpl implements TakerService {
         if (!checkRemainingTickets(ticketMap, orderDetailDto)) {
             throw new InsufficientTicketException("Not enough available tickets.");
         }
+    }
+
+    private boolean isOrderMessage(OrderMessage orderMessage) {
+        return orderMessage != null && orderMessage.getOrderDto() != null &&
+                !CollectionUtils.isEmpty(orderMessage.getOrderDetailDtoList());
     }
 
     private List<TicketDto> getRemainingTickets() {
